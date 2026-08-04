@@ -4,7 +4,7 @@ import requests
 from datetime import datetime
 
 # Настройка страницы
-st.set_page_config(page_title="Bedrock & Xbox Чекер", page_icon="🔍", layout="centered")
+st.set_page_config(page_title="Bedrock & Xbox Чекер v3.0", page_icon="🔍", layout="centered")
 
 st.title("🔍 Bedrock & Xbox VIP Чекер v3.0")
 st.write("Автоматический поиск игроков по официальным базам Microsoft Xbox Live и локальным архивам!")
@@ -35,36 +35,47 @@ if action == "🔎 Умный Авто-Поиск игрока Bedrock":
         if not search_name:
             st.error("Пожалуйста, укажите никнейм!")
         else:
-            # 1. ШАГ: Автоматический запрос к официальной базе Microsoft Xbox Live (Bedrock)
+            # 1. ШАГ: Запрос к серверам через резервный и стабильный глобальный API
             with st.spinner("📡 Пробиваю никнейм по базам Microsoft Xbox Live..."):
+                api_success = False
                 try:
-                    # Используем специальный эндпоинт для Bedrock Edition
-                    response = requests.get(f"https://playerdb.co{search_name}", timeout=8)
-                    
+                    # Пробуем первый мощный шлюз
+                    response = requests.get(f"https://playerdb.co{search_name}", timeout=7)
                     if response.status_code == 200:
                         res_data = response.json()
                         if res_data.get("success") == True:
-                            st.balloons()
-                            st.success(f"🎯 Игрок **{search_name}** найден в глобальной сети Microsoft!")
-                            
                             player_info = res_data["data"]["player"]
+                            st.balloons()
+                            st.success(f"🎯 Игрок **{search_name}** найден в системе Microsoft!")
                             
-                            # Выводим аватарку скина, которую сайт нашел САМ
-                            avatar_url = player_info.get("avatar", f"https://minotar.net{search_name}/100.png")
-                            st.image(avatar_url, width=100, caption="Официальный аватар игрока")
+                            # Показываем красивую 2D-голову скина
+                            st.image(f"https://minotar.net{search_name}/100.png", width=100, caption="Скин игрока")
                             
                             st.markdown("---")
                             st.write("### 📋 Данные аккаунта Microsoft:")
-                            st.write(f"🎮 **Официальный ник (GamerTag):** `{player_info.get('username')}`")
-                            st.write(f"🆔 **Секретный вечный ID (XUID):** `{player_info.get('id')}`")
-                            st.write(f"🌍 **Тип аккаунта:** `Microsoft Bedrock (PE / Xbox / Windows)`")
-                        else:
-                            st.warning("ℹ️ Игрок с таким никнеймом не зарегистрирован в официальной системе Xbox Live.")
-                    else:
-                        st.warning("ℹ️ Игрок не найден в глобальной базе Microsoft. Проверьте правильность написания ника (большие и маленькие буквы).")
-                
-                except Exception as e:
-                    st.warning("⚠️ Глобальные сервера Microsoft заняты. Перехожу к поиску по локальным логам...")
+                            st.write(f"🎮 **Официальный ник в Xbox:** `{player_info.get('username')}`")
+                            st.write(f"🆔 **Секретный ID аккаунта (XUID/UUID):** `{player_info.get('id')}`")
+                            st.write(f"🌍 **Платформа:** `Minecraft Bedrock / Xbox Live`")
+                            api_success = True
+                except Exception:
+                    api_success = False
+
+                # Если первый шлюз устал, бьем через второй запасной API профилей
+                if not api_success:
+                    try:
+                        resp2 = requests.get(f"https://ashcon.app{search_name}", timeout=7)
+                        if resp2.status_code == 200:
+                            data2 = resp2.json()
+                            st.balloons()
+                            st.success(f"🎯 Игрок **{search_name}** найден через резервную базу!")
+                            st.image(f"https://minotar.net{search_name}/100.png", width=100)
+                            st.write(f"🆔 **UUID Лицензии:** `{data2.get('uuid')}`")
+                            api_success = True
+                    except Exception:
+                        pass
+
+                if not api_success:
+                    st.warning("ℹ️ Игрок не найден в глобальной лицензионной базе Xbox Live. Возможно, это локальный пиратский ник. Перехожу к твоим логам...")
 
             # 2. ШАГ: Поиск по твоей личной базе данных (IP-адреса и сервера)
             with st.spinner("🔎 Проверяю локальные архивы серверов..."):
