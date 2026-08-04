@@ -8,7 +8,7 @@ st.set_page_config(page_title="Bedrock Player Checker", page_icon="🔍", layout
 st.title("🔍 Bedrock VIP Player Checker (База Данных)")
 st.write("Поиск игроков по никнейму, история заходов, IP-адреса и статистика.")
 
-# Подключаем локальную базу данных SQLite
+# Инициализируем базу данных в памяти или локальном файле
 conn = sqlite3.connect("players_database.db", check_same_thread=False)
 cursor = conn.cursor()
 
@@ -24,43 +24,25 @@ CREATE TABLE IF NOT EXISTS players (
 """)
 conn.commit()
 
-# --- ТЕСТОВЫЕ ДАННЫЕ (УДАЛИ ИЛИ ИЗМЕНИ ИХ ПОД СЕБЯ) ---
-# Наполним базу парочкой примеров, чтобы ты сразу мог проверить поиск
-sample_data = [
-    ("Steve_Mine", "178.234.55.91", "Bedrock-Survival PE", "2024"),
-    ("Alex_Gamer", "94.20.115.244", "HyperDrop Network", "2025"),
-    ("Gamer_AZ_01", "85.132.66.12", "Baku_Craft_PE", "2026"),
-]
-for user, ip, srv, yr in sample_data:
-    try:
-        cursor.execute("INSERT INTO players (username, ip_address, last_server, visit_year) VALUES (?, ?, ?, ?)", (user, ip, srv, yr))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        pass
-# ----------------------------------------------------
-
 # Меню выбора режима на сайте
 action = st.radio("Выберите действие:", ["🔎 Найти игрока в базе", "➕ Добавить/Обновить игрока (Логгер)"])
 
 # ================= РЕЖИМ 1: ПОИСК ПО НИКНЕЙМУ =================
 if action == "🔎 Найти игрока в базе":
     st.subheader("🔎 Поиск информации по никнейму")
-    search_name = st.text_input("Введите точный никнейм игрока для проверки:", placeholder="Например: Alex_Gamer")
+    search_name = st.text_input("Введите точный никнейм игрока для проверки:", placeholder="Например: Steve")
     
     if st.button("🚀 НАЧАТЬ ПОИСК", use_container_width=True):
         if not search_name:
             st.error("Пожалуйста, укажите ник!")
         else:
             with st.spinner("Проверяю архивы базы данных..."):
-                # Ищем игрока в нашей SQL-базе (без учета регистра букв)
                 cursor.execute("SELECT ip_address, last_server, visit_year FROM players WHERE LOWER(username) = LOWER(?)", (search_name,))
                 result = cursor.fetchone()
                 
                 if result:
                     st.balloons()
                     st.success(f"🎯 Игрок **{search_name}** найден в системе!")
-                    
-                    # Красиво выводим информацию в карточках
                     st.markdown("---")
                     st.markdown(f"🌐 **Последний известный IP-адрес:** `{result[0]}`")
                     st.markdown(f"🎮 **Где был замечен (Сервер):** {result[1]}")
@@ -71,7 +53,7 @@ if action == "🔎 Найти игрока в базе":
 # ================= РЕЖИМ 2: ДОБАВЛЕНИЕ В БАЗУ (ДЛЯ АДМИНА) =================
 elif action == "➕ Добавить/Обновить игрока (Логгер)":
     st.subheader("📝 Панель ручного добавления (Имитация логгера сервера)")
-    st.write("Сюда ты можешь заносить данные игроков, которых ты встретил, или настроить интеграцию с логами.")
+    st.write("Сюда ты можешь заносить данные игроков, которых ты встретил!")
     
     new_user = st.text_input("Никнейм игрока:")
     new_ip = st.text_input("IP-адрес:")
@@ -82,7 +64,6 @@ elif action == "➕ Добавить/Обновить игрока (Логгер
         if not new_user or not new_ip or not new_server:
             st.error("Заполните все три поля!")
         else:
-            # Записываем или обновляем данные в SQLite
             cursor.execute("""
             INSERT INTO players (username, ip_address, last_server, visit_year) 
             VALUES (?, ?, ?, ?)
