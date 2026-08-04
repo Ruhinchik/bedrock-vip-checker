@@ -4,10 +4,10 @@ import requests
 from datetime import datetime
 
 # Настройка страницы
-st.set_page_config(page_title="Bedrock Авто-Чекер", page_icon="🔍", layout="centered")
+st.set_page_config(page_title="Bedrock & Xbox Чекер", page_icon="🔍", layout="centered")
 
-st.title("🔍 Bedrock VIP Player Checker v2.0")
-st.write("Автоматический поиск игроков по базам данных Microsoft и локальным архивам серверов!")
+st.title("🔍 Bedrock & Xbox VIP Чекер v3.0")
+st.write("Автоматический поиск игроков по официальным базам Microsoft Xbox Live и локальным архивам!")
 
 # Инициализируем локальную базу для IP-адресов
 conn = sqlite3.connect("players_database.db", check_same_thread=False)
@@ -24,49 +24,47 @@ CREATE TABLE IF NOT EXISTS players (
 conn.commit()
 
 # Меню выбора режима
-action = st.radio("Выберите действие:", ["🔎 Умный Авто-Поиск игрока", "➕ Добавить IP/Логи вручную"])
+action = st.radio("Выберите действие:", ["🔎 Умный Авто-Поиск игрока Bedrock", "➕ Добавить IP/Логи вручную"])
 
-# ================= РЕЖИМ 1: УМНЫЙ АВТО-ПОИСК =================
-if action == "🔎 Умный Авто-Поиск игрока":
-    st.subheader("🌐 Автоматический пробив по базам данных")
-    search_name = st.text_input("Введите никнейм игрока для авто-поиска:", placeholder="Например: Steve")
+# ================= РЕЖИМ 1: УМНЫЙ АВТО-ПОИСК С ПОДДЕРЖКОЙ BEDROCK =================
+if action == "🔎 Умный Авто-Поиск игрока Bedrock":
+    st.subheader("🌐 Глобальный пробив Microsoft & Xbox Live")
+    search_name = st.text_input("Введите точный никнейм игрока Bedrock:", placeholder="Например: Steve")
     
     if st.button("🚀 НАЧАТЬ АВТО-ПОИСК", use_container_width=True):
         if not search_name:
             st.error("Пожалуйста, укажите никнейм!")
         else:
-            # 1. ШАГ: Автоматический запрос к серверам Minecraft/Microsoft в реальном времени
-            with st.spinner("📡 Подключаюсь к базам данных Mojang/Microsoft..."):
+            # 1. ШАГ: Автоматический запрос к официальной базе Microsoft Xbox Live (Bedrock)
+            with st.spinner("📡 Пробиваю никнейм по базам Microsoft Xbox Live..."):
                 try:
-                    # Делаем запрос к открытому API профилей
-                    response = requests.get(f"https://ashcon.app{search_name}", timeout=8)
+                    # Используем специальный эндпоинт для Bedrock Edition
+                    response = requests.get(f"https://playerdb.co{search_name}", timeout=8)
                     
                     if response.status_code == 200:
-                        data = response.json()
-                        st.balloons()
-                        st.success(f"🎯 Игрок **{search_name}** успешно найден в глобальной сети!")
-                        
-                        # Вытаскиваем официальные данные
-                        uuid = data.get("uuid", "Неизвестно")
-                        created_at = data.get("created_at", "Давно")
-                        
-                        # Показываем аватарку скина, которую сайт нашел САМ
-                        st.image(f"https://minotar.net{search_name}/100.png", width=100, caption="Текущий скин")
-                        
-                        st.markdown("---")
-                        st.write("### 📋 Глобальные данные аккаунта:")
-                        st.write(f"🆔 **Уникальный UUID (Защищенный ID):** `{uuid}`")
-                        
-                        # Показываем историю прошлых никнеймов, если они есть
-                        if "username_history" in data:
-                            st.write("📝 **История прошлых никнеймов (как шифровался):**")
-                            for old_name in data["username_history"]:
-                                st.write(f"• {old_name.get('username')}")
+                        res_data = response.json()
+                        if res_data.get("success") == True:
+                            st.balloons()
+                            st.success(f"🎯 Игрок **{search_name}** найден в глобальной сети Microsoft!")
+                            
+                            player_info = res_data["data"]["player"]
+                            
+                            # Выводим аватарку скина, которую сайт нашел САМ
+                            avatar_url = player_info.get("avatar", f"https://minotar.net{search_name}/100.png")
+                            st.image(avatar_url, width=100, caption="Официальный аватар игрока")
+                            
+                            st.markdown("---")
+                            st.write("### 📋 Данные аккаунта Microsoft:")
+                            st.write(f"🎮 **Официальный ник (GamerTag):** `{player_info.get('username')}`")
+                            st.write(f"🆔 **Секретный вечный ID (XUID):** `{player_info.get('id')}`")
+                            st.write(f"🌍 **Тип аккаунта:** `Microsoft Bedrock (PE / Xbox / Windows)`")
+                        else:
+                            st.warning("ℹ️ Игрок с таким никнеймом не зарегистрирован в официальной системе Xbox Live.")
                     else:
-                        st.warning("ℹ️ Глобальный лицензионный аккаунт не найден (возможно, это пиратский ник или мобильный Bedrock-аккаунт без привязки к Java).")
+                        st.warning("ℹ️ Игрок не найден в глобальной базе Microsoft. Проверьте правильность написания ника (большие и маленькие буквы).")
                 
-                except Exception:
-                    st.warning("⚠️ Глобальные сервера заняты. Перехожу к поиску по локальным логам...")
+                except Exception as e:
+                    st.warning("⚠️ Глобальные сервера Microsoft заняты. Перехожу к поиску по локальным логам...")
 
             # 2. ШАГ: Поиск по твоей личной базе данных (IP-адреса и сервера)
             with st.spinner("🔎 Проверяю локальные архивы серверов..."):
@@ -103,4 +101,4 @@ elif action == "➕ Добавить IP/Логи вручную":
 
 # Подвал
 st.markdown("---")
-st.write("👨‍💻 Bedrock VIP Checker v2.0 | Глобальный авто-поиск")
+st.write("👨‍💻 Bedrock & Xbox VIP Checker v3.0 | Полный пробив Microsoft")
